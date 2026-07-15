@@ -119,43 +119,34 @@
           return;
         }
 
-        const mount = document.createElement("div");
-        mount.id = "youtube-player";
-        message.replaceWith(mount);
+        const playerParameters = new URLSearchParams({
+          enablejsapi: "1",
+          playsinline: "1",
+          rel: "0",
+          origin: window.location.origin,
+          widget_referrer: window.location.href,
+        });
+        if (start > 0) playerParameters.set("start", String(start));
 
-        function createYoutubePlayer() {
-          const player = new window.YT.Player("youtube-player", {
-            width: "100%",
-            height: "100%",
-            videoId,
-            playerVars: {
-              playsinline: 1,
-              rel: 0,
-              start,
-              origin: window.location.origin,
-              widget_referrer: window.location.href,
-            },
-            events: {
-              onReady: (event) => {
-                event.target.setVolume(1);
-                window.setTimeout(() => event.target.setVolume(1), 500);
-              },
-              onStateChange: (event) => {
-                if (event.data === window.YT.PlayerState.PLAYING) event.target.setVolume(1);
-              },
-            },
-          });
-          return player;
-        }
-
-        if (window.YT && window.YT.Player) {
-          createYoutubePlayer();
-        } else {
-          window.onYouTubeIframeAPIReady = createYoutubePlayer;
-          const api = document.createElement("script");
-          api.src = "https://www.youtube.com/iframe_api";
-          document.head.appendChild(api);
-        }
+        const player = document.createElement("iframe");
+        player.title = "Vídeo do YouTube";
+        player.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        player.allowFullscreen = true;
+        player.referrerPolicy = "strict-origin-when-cross-origin";
+        player.src = `https://www.youtube.com/embed/${videoId}?${playerParameters.toString()}`;
+        player.addEventListener("load", () => {
+          let attempts = 0;
+          const volumeTimer = window.setInterval(() => {
+            attempts += 1;
+            player.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "notas-player" }), "*");
+            player.contentWindow.postMessage(
+              JSON.stringify({ event: "command", func: "setVolume", args: [1] }),
+              "*"
+            );
+            if (attempts >= 20) window.clearInterval(volumeTimer);
+          }, 250);
+        });
+        message.replaceWith(player);
       })();
     </script>
   </body>
