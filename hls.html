@@ -52,6 +52,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.16/dist/hls.min.js"></script>
     <script>
       (() => {
+        const INITIAL_VOLUME = 0.01;
         const message = document.getElementById("message");
         const source = new URLSearchParams(window.location.search).get("src") || "";
 
@@ -80,6 +81,8 @@
         video.autoplay = false;
         video.playsInline = true;
         video.preload = "metadata";
+        video.volume = INITIAL_VOLUME;
+        video.addEventListener("loadedmetadata", () => { video.volume = INITIAL_VOLUME; }, { once: true });
         video.setAttribute("aria-label", "Leitor HLS");
         message.replaceWith(video);
 

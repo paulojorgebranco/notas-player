@@ -119,6 +119,7 @@
         }
 
         const playerParameters = new URLSearchParams({
+          enablejsapi: "1",
           playsinline: "1",
           rel: "0",
           origin: window.location.origin,
@@ -132,6 +133,11 @@
         player.allowFullscreen = true;
         player.referrerPolicy = "strict-origin-when-cross-origin";
         player.src = `https://www.youtube.com/embed/${videoId}?${playerParameters.toString()}`;
+        player.addEventListener("load", () => {
+          const command = JSON.stringify({ event: "command", func: "setVolume", args: [1] });
+          player.contentWindow.postMessage(command, "https://www.youtube.com");
+          window.setTimeout(() => player.contentWindow.postMessage(command, "https://www.youtube.com"), 800);
+        });
         message.replaceWith(player);
       })();
     </script>

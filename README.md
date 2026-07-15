@@ -21,3 +21,5 @@ O leitor HLS dedicado está em:
 Os streams HLS têm de permitir pedidos CORS e não podem depender de uma sessão ou autenticação indisponível no webview.
 
 A página não guarda dados, não usa analytics próprios e não comunica com o plugin.
+
+Os leitores começam com o volume no mínimo audível: 1%.
