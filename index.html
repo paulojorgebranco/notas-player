@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <title>Notas — YouTube Player</title>
+    <meta name="referrer" content="no-referrer" />
+    <title>Notas — Video Player</title>
     <style>
       * { box-sizing: border-box; }
 
@@ -25,11 +25,13 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      iframe {
+      iframe,
+      video {
         display: block;
         width: 100%;
         height: 100%;
         border: 0;
+        background: #000;
       }
 
       .message {
@@ -47,17 +49,72 @@
   </head>
   <body>
     <div id="message" class="message">A preparar o vídeo…</div>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.16/dist/hls.min.js"></script>
     <script>
       (() => {
         const parameters = new URLSearchParams(window.location.search);
         const videoId = parameters.get("v") || "";
+        const hlsValue = parameters.get("hls") || "";
         const requestedStart = Number.parseInt(parameters.get("start") || "0", 10);
         const start = Number.isFinite(requestedStart) && requestedStart > 0 ? requestedStart : 0;
         const validVideoId = /^[A-Za-z0-9_-]{11}$/.test(videoId);
         const message = document.getElementById("message");
 
+        function validHlsUrl(value) {
+          try {
+            const url = new URL(value);
+            return url.protocol === "https:" && /\.m3u8$/i.test(url.pathname);
+          } catch (error) {
+            return false;
+          }
+        }
+
+        function showHlsPlayer(url) {
+          const video = document.createElement("video");
+          video.controls = true;
+          video.autoplay = false;
+          video.playsInline = true;
+          video.preload = "metadata";
+          video.setAttribute("aria-label", "Vídeo HLS");
+          message.replaceWith(video);
+
+          if (window.Hls && window.Hls.isSupported()) {
+            const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            hls.on(window.Hls.Events.ERROR, (_event, data) => {
+              if (!data.fatal) return;
+              if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError();
+                return;
+              }
+              hls.destroy();
+              video.replaceWith(message);
+              message.textContent = "Não foi possível reproduzir este stream HLS. Confirma o endereço, a validade do link e as permissões CORS.";
+            });
+            return;
+          }
+
+          if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = url;
+            return;
+          }
+
+          video.replaceWith(message);
+          message.textContent = "Este navegador não suporta reprodução HLS.";
+        }
+
+        if (hlsValue) {
+          if (!validHlsUrl(hlsValue)) {
+            message.textContent = "Link .m3u8 inválido. Usa um endereço HTTPS.";
+            return;
+          }
+          showHlsPlayer(hlsValue);
+          return;
+        }
+
         if (!validVideoId) {
-          message.textContent = "Link do YouTube inválido.";
+          message.textContent = "Link de vídeo inválido.";
           return;
         }
 
