@@ -84,16 +84,43 @@
         video.setAttribute("aria-label", "Leitor HLS");
         message.replaceWith(video);
 
-        function applyInitialVolume() {
+        let audioGraph = null;
+
+        function applyNativeFallback() {
           video.volume = INITIAL_GAIN;
         }
-        applyInitialVolume();
-        video.addEventListener("loadedmetadata", applyInitialVolume);
-        video.addEventListener("canplay", applyInitialVolume);
+
+        function connectMinimumGain() {
+          if (audioGraph) {
+            audioGraph.gain.gain.value = INITIAL_GAIN;
+            if (audioGraph.context.state === "suspended") audioGraph.context.resume();
+            return;
+          }
+
+          try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) throw new Error("Web Audio indisponível");
+            const context = new AudioContextClass();
+            const sourceNode = context.createMediaElementSource(video);
+            const gainNode = context.createGain();
+            gainNode.gain.value = INITIAL_GAIN;
+            sourceNode.connect(gainNode);
+            gainNode.connect(context.destination);
+            audioGraph = { context, gain: gainNode };
+            video.volume = 1;
+            context.resume();
+          } catch (error) {
+            applyNativeFallback();
+          }
+        }
+
+        applyNativeFallback();
+        video.addEventListener("loadedmetadata", applyNativeFallback);
+        video.addEventListener("canplay", applyNativeFallback);
         video.addEventListener("play", () => {
-          applyInitialVolume();
-          window.setTimeout(applyInitialVolume, 100);
-          window.setTimeout(applyInitialVolume, 500);
+          connectMinimumGain();
+          window.setTimeout(connectMinimumGain, 150);
+          window.setTimeout(connectMinimumGain, 700);
         });
 
         if (window.Hls && window.Hls.isSupported()) {
