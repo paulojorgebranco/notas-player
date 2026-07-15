@@ -52,7 +52,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.16/dist/hls.min.js"></script>
     <script>
       (() => {
-        const INITIAL_VOLUME = 0.01;
+        const INITIAL_GAIN = 0.01;
         const message = document.getElementById("message");
         const source = new URLSearchParams(window.location.search).get("src") || "";
 
@@ -81,10 +81,27 @@
         video.autoplay = false;
         video.playsInline = true;
         video.preload = "metadata";
-        video.volume = INITIAL_VOLUME;
-        video.addEventListener("loadedmetadata", () => { video.volume = INITIAL_VOLUME; }, { once: true });
         video.setAttribute("aria-label", "Leitor HLS");
         message.replaceWith(video);
+
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) throw new Error("Web Audio indisponível");
+          const audioContext = new AudioContextClass();
+          const sourceNode = audioContext.createMediaElementSource(video);
+          const gainNode = audioContext.createGain();
+          gainNode.gain.value = INITIAL_GAIN;
+          sourceNode.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          video.volume = 1;
+          video.addEventListener("play", () => {
+            gainNode.gain.value = INITIAL_GAIN;
+            if (audioContext.state === "suspended") audioContext.resume();
+          });
+        } catch (error) {
+          video.volume = INITIAL_GAIN;
+          video.addEventListener("play", () => { video.volume = INITIAL_GAIN; });
+        }
 
         if (window.Hls && window.Hls.isSupported()) {
           const hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
