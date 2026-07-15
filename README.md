@@ -14,6 +14,10 @@ Exemplo:
 
 `https://paulojorgebranco.github.io/notas-player/?hls=URL_M3U8_CODIFICADO`
 
+O leitor HLS dedicado está em:
+
+`https://paulojorgebranco.github.io/notas-player/hls.html?src=URL_M3U8_CODIFICADO`
+
 Os streams HLS têm de permitir pedidos CORS e não podem depender de uma sessão ou autenticação indisponível no webview.
 
 A página não guarda dados, não usa analytics próprios e não comunica com o plugin.
